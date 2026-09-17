@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Меблі на замовлення — Харків</title>
+<style>
+  :root {
+    --bg: #0d0c0a;
+    --fg: #f4efe6;
+    --accent: #c9a35a;
+    --muted: #a99f8f;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    width: 100%;
+    /* no overflow-x here on purpose: overflow (even just x) on html/body
+       breaks position:sticky for descendants in most browsers, which is
+       exactly what pins the scroll-hero canvas. Width 100% + no element
+       wider than the viewport keeps us from needing it. */
+  }
+  .hero-section {
+    position: relative;
+    height: 700vh;
+    background: var(--bg);
+  }
+  .hero-sticky {
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    width: 100%;
+    overflow: hidden;
+  }
+  #heroCanvas {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    background: var(--bg);
+    display: block;
+  }
+  .hero-fade-top, .hero-fade-bottom {
+    position: absolute;
+    left: 0; right: 0;
+    height: 22vh;
+    pointer-events: none;
+    z-index: 2;
+  }
+  .hero-fade-top {
+    top: 0;
+    background: linear-gradient(to bottom, rgba(13,12,10,0.65), rgba(13,12,10,0));
+  }
+  .hero-fade-bottom {
+    bottom: 0;
+    background: linear-gradient(to top, rgba(13,12,10,0.75), rgba(13,12,10,0));
+  }
+  .hero-title {
+    position: absolute;
+    top: 8vh; left: 50%;
+    transform: translateX(-50%);
+    text-align: center;
+    z-index: 3;
+    max-width: 90vw;
+  }
+  .hero-title h1 {
+    font-size: clamp(1.4rem, 4vw, 2.6rem);
+    font-weight: 600;
+    margin: 0 0 0.4em;
+    letter-spacing: 0.01em;
+  }
+  .hero-title p {
+    color: var(--muted);
+    font-size: clamp(0.9rem, 2vw, 1.1rem);
+    margin: 0;
+  }
+  .stop-caption {
+    position: absolute;
+    left: 6vw; bottom: 10vh;
+    z-index: 3;
+    max-width: 480px;
+    opacity: 0;
+    transition: opacity 0.5s ease;
+  }
+  .stop-caption.visible { opacity: 1; }
+  .stop-caption .tag {
+    display: inline-block;
+    color: var(--accent);
+    font-size: 0.8rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 0.5em;
+  }
+  .stop-caption h2 {
+    font-size: clamp(1.3rem, 3.2vw, 2rem);
+    margin: 0 0 0.5em;
+    font-weight: 600;
+  }
+  .stop-caption p {
+    color: var(--muted);
+    margin: 0;
+    font-size: 0.95rem;
+    line-height: 1.4;
+  }
+  .thumbs {
+    position: absolute;
+    right: 6vw; bottom: 10vh;
+    z-index: 3;
+    display: flex;
+    gap: 10px;
+    opacity: 0;
+    transition: opacity 0.5s ease;
+  }
+  .thumbs.visible { opacity: 1; }
+  .thumbs a {
+    display: block;
+    width: 84px; height: 84px;
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid rgba(244,239,230,0.25);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+  }
+  .thumbs img {
+    width: 100%; height: 100%;
+    object-fit: cover;
+    display: block;
+    transition: transform 0.3s ease;
+  }
+  .thumbs a:hover img { transform: scale(1.08); }
+  .scroll-hint {
+    position: absolute;
+    bottom: 3vh; left: 50%;
+    transform: translateX(-50%);
+    z-index: 3;
+    color: var(--muted);
+    font-size: 0.8rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    opacity: 0.8;
+  }
+
+  .catalog {
+    background: linear-gradient(to bottom, var(--bg), #16130f 40%, #16130f);
+    padding: 8vh 6vw 10vh;
+  }
+  .catalog h2 {
+    font-size: clamp(1.5rem, 3.5vw, 2.4rem);
+    margin: 0 0 0.3em;
+    text-align: center;
+  }
+  .catalog .sub {
+    text-align: center;
+    color: var(--muted);
+    margin: 0 0 3em;
+  }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 16px;
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+  .grid figure {
+    margin: 0;
+    border-radius: 12px;
+    overflow: hidden;
+    background: #1c1812;
+    aspect-ratio: 1;
+  }
+  .grid img {
+    width: 100%; height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+  .contact {
+    text-align: center;
+    padding: 6vh 6vw 10vh;
+    background: #16130f;
+  }
+  .contact h3 {
+    font-size: clamp(1.3rem, 3vw, 2rem);
+    margin: 0 0 0.6em;
+  }
+  .contact .phones {
+    font-size: 1.1rem;
+    color: var(--accent);
+    margin: 0 0 1.5em;
+  }
+  .contact .note {
+    color: var(--muted);
+    font-size: 0.8rem;
+    max-width: 480px;
+    margin: 0 auto;
+    line-height: 1.5;
+  }
+</style>
+</head>
+<body>
+
+  <section class="hero-section">
+    <div class="hero-sticky">
+      <canvas id="heroCanvas"></canvas>
+      <div class="hero-fade-top"></div>
+      <div class="hero-fade-bottom"></div>
+
+      <div class="hero-title" id="introTitle">
+        <h1>Меблі на замовлення у Харкові</h1>
+        <p>Заощадимо кожний сантиметр корисної площі</p>
+      </div>
+
+      <div class="stop-caption" data-stop="kitchen">
+        <span class="tag">Кухня</span>
+        <h2>Кухонний гарнітур під замовлення</h2>
+        <p>Стільниця, вбудована техніка, фасади без ручок — план під розмір вашої кухні.</p>
+      </div>
+      <div class="thumbs" data-stop="kitchen">
+        <a href="#catalog-kitchen"><img src="catalog/kitchen1.jpg" alt="Кухня"></a>
+        <a href="#catalog-kitchen"><img src="catalog/kitchen2.jpg" alt="Кухня"></a>
+      </div>
+
+      <div class="stop-caption" data-stop="wardrobe">
+        <span class="tag">Шафа-купе</span>
+        <h2>Шафа з нішею під техніку</h2>
+        <p>Відкриті полиці, ніша під ТВ, місце для всього — жодного втраченого сантиметра.</p>
+      </div>
+      <div class="thumbs" data-stop="wardrobe">
+        <a href="#catalog-wardrobe"><img src="catalog/wardrobe1.jpg" alt="Шафа"></a>
+        <a href="#catalog-wardrobe"><img src="catalog/wardrobe2.jpg" alt="Шафа"></a>
+      </div>
+
+      <div class="stop-caption" data-stop="closet">
+        <span class="tag">Гардеробна</span>
+        <h2>Гардеробна з повним циклом зберігання</h2>
+        <p>Висувні ящики, штанги, полиці під взуття та білизну — все продумано під ваші речі.</p>
+      </div>
+      <div class="thumbs" data-stop="closet">
+        <a href="#catalog-closet"><img src="catalog/closet1.jpg" alt="Гардеробна"></a>
+        <a href="#catalog-closet"><img src="catalog/closet2.jpg" alt="Гардеробна"></a>
+      </div>
+
+      <div class="stop-caption" data-stop="hallway">
+        <span class="tag">Коридор</span>
+        <h2>Вбудована система в коридорі</h2>
+        <p>Забудова ніш від підлоги до стелі — простір, який зазвичай пропадає, працює на зберігання.</p>
+      </div>
+      <div class="thumbs" data-stop="hallway">
+        <a href="#catalog-closet"><img src="catalog/wardrobe1.jpg" alt="Коридор"></a>
+        <a href="#catalog-closet"><img src="catalog/closet2.jpg" alt="Коридор"></a>
+      </div>
+
+      <div class="scroll-hint" id="scrollHint">Гортайте вниз ↓</div>
+    </div>
+  </section>
+
+  <section class="catalog" id="catalog">
+    <h2>Наші роботи</h2>
+    <p class="sub">Реальні фото з наших проєктів у Харкові</p>
+    <div class="grid">
+      <figure id="catalog-kitchen"><img src="catalog/kitchen1.jpg" alt="Кухня"></figure>
+      <figure><img src="catalog/kitchen2.jpg" alt="Кухня"></figure>
+      <figure id="catalog-wardrobe"><img src="catalog/wardrobe1.jpg" alt="Шафа"></figure>
+      <figure><img src="catalog/wardrobe2.jpg" alt="Шафа"></figure>
+      <figure id="catalog-closet"><img src="catalog/closet1.jpg" alt="Гардеробна"></figure>
+      <figure><img src="catalog/closet2.jpg" alt="Гардеробна"></figure>
+    </div>
+  </section>
+
+  <section class="contact">
+    <h3>Виїзд на замір — безкоштовно</h3>
+    <p class="phones">067-97-93-023 &nbsp;·&nbsp; 050-226-28-40</p>
+    <p class="note">Інтер'єр на відео — стилізована візуалізація для демонстрації формату. Усі меблі, фото робіт і відгуки — справжні, з наших проєктів у Харкові.</p>
+  </section>
+
+<script type="module">
+  import ScrollFrames from './scroll_frames.js';
+
+  const canvas = document.getElementById('heroCanvas');
+  const introTitle = document.getElementById('introTitle');
+  const scrollHint = document.getElementById('scrollHint');
+  const captions = document.querySelectorAll('.stop-caption');
+  const thumbs = document.querySelectorAll('.thumbs');
+
+  // Границы сегментов: 120 кадров на переход, 480 всего.
+  // 0.00 intro -> 0.25 kitchen -> 0.50 wardrobe -> 0.75 closet -> 1.00 hallway
+  function setActive(stop) {
+    captions.forEach(el => el.classList.toggle('visible', el.dataset.stop === stop));
+    thumbs.forEach(el => el.classList.toggle('visible', el.dataset.stop === stop));
+    introTitle.style.opacity = stop === 'intro' ? '1' : '0';
+    scrollHint.style.opacity = stop === 'intro' ? '0.8' : '0';
+  }
+  setActive('intro');
+
+  const seq = new ScrollFrames({
+    canvas,
+    scroller: document.querySelector('.hero-section'),
+    dir: './combined',
+    manifest: './combined/manifest.json',
+    fit: 'cover',
+    timeline: [
+      { to: 0.02, scroll: 1 },   // intro hold
+      { to: 0.25, scroll: 3 },   // travel to kitchen
+      { to: 0.27, scroll: 1 },   // hold at kitchen
+      { to: 0.50, scroll: 3 },   // travel to wardrobe
+      { to: 0.52, scroll: 1 },   // hold at wardrobe
+      { to: 0.75, scroll: 3 },   // travel to closet
+      { to: 0.77, scroll: 1 },   // hold at closet
+      { to: 1.00, scroll: 3 },   // travel to hallway
+    ],
+    onFrame: (p) => {
+      if (p < 0.25) setActive('intro');
+      else if (p < 0.50) setActive('kitchen');
+      else if (p < 0.75) setActive('wardrobe');
+      else if (p < 0.90) setActive('closet');
+      else setActive('hallway');
+    },
+  });
+
+  seq.start().catch(err => console.error('scroll frames failed to start', err));
+</script>
+
+</body>
+</html>
